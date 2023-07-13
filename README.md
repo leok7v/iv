@@ -3,16 +3,16 @@ Intravenous Image Viewer and upscaler experiments
 
 ### TODO:
 
-[ ] Implement ICC color profiles.
-   see: https://learn.microsoft.com/en-us/windows/win32/wcs/alphabetical-list-of-all-wcsfunctions
-   ICC profile is spawn across APP2 tags of JPG images
-   see: https://github.com/drewnoakes/metadata-extractor/issues/65
+- [ ] Implement ICC color profiles.
+   * see: https://learn.microsoft.com/en-us/windows/win32/wcs/alphabetical-list-of-all-wcsfunctions
+   * ICC profile is spawn across APP2 tags of JPG images
+   * see: https://github.com/drewnoakes/metadata-extractor/issues/65
 
-[ ] Implement async reading of next image from the folder and keyboard left/right space navigation
+- [ ] Implement async reading of next image from the folder and keyboard left/right space navigation
 
-[ ] Implement going into subfolders (maybe)
+- [ ] Implement going into subfolders (maybe)
 
-[ ] Implement upscaling DNN neural net
+- [ ] Implement upscaling DNN neural net
     Using input image itself as a 3x3 -> 2x2 training set:
 
     1 Downsample image by 2x
@@ -31,7 +31,7 @@ Intravenous Image Viewer and upscaler experiments
 
     6 Optimize using OpenCL where available and AVX
 
-[ ] UX improvements: Upscale -> Save to filename.2x.ext, Side by Side zoom split screen.
+- [ ] UX improvements: Upscale -> Save to filename.2x.ext, Side by Side zoom split screen.
 
-[ ] Users feedback.
+- [ ] Users feedback.
 
