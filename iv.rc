@@ -1,0 +1,10 @@
+﻿101 ICON "iv.ico"
+
+#define company_name "Leo Kuznetsov"
+#define copyright "Copyright (C) 2023 Leo Kuznetsov. All rights reserved."
+#define file_description "Image Viewer"
+#define original_file_name "iv.exe"
+#define product_name "iv"
+
+#include "version.rc"
+
