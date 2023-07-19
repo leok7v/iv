@@ -149,9 +149,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\crt.h" />
+    <ClInclude Include="..\dense.h" />
     <ClInclude Include="..\quick.h" />
     <ClInclude Include="..\samples\version.h" />
     <ClInclude Include="..\stb_image.h" />
+    <ClInclude Include="..\up.h" />
     <ClInclude Include="..\version.h" />
   </ItemGroup>
   <ItemGroup>
@@ -170,8 +172,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\dense.c" />
     <ClCompile Include="..\implementations.c" />
     <ClCompile Include="..\iv.c" />
+    <ClCompile Include="..\up.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

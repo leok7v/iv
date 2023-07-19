@@ -397,6 +397,9 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
+#generated version.h
+version.h
+
 #project specific external dependencies
 quick.h
 crt.h

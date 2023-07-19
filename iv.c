@@ -1,6 +1,7 @@
 /* Copyright (c) Dmitry "Leo" Kuznetsov 2021 see LICENSE for details */
 #include "quick.h"
 #include "stb_image.h"
+#include "dense.h"
 
 // TODO: see README.md
 

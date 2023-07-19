@@ -16,6 +16,8 @@
     <ClInclude Include="..\version.h">
       <Filter>rt</Filter>
     </ClInclude>
+    <ClInclude Include="..\dense.h" />
+    <ClInclude Include="..\up.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="res">
@@ -43,5 +45,7 @@
     <ClCompile Include="..\implementations.c">
       <Filter>rt</Filter>
     </ClCompile>
+    <ClCompile Include="..\up.c" />
+    <ClCompile Include="..\dense.c" />
   </ItemGroup>
 </Project>
