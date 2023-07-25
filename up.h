@@ -3,21 +3,23 @@
 
 begin_c
 
+typedef struct up_image_s {
+    uint8_t* p; // pixels
+    int32_t  w; // width
+    int32_t  h; // height
+    int32_t  s; // stride
+    int32_t  c; // components (1,3,4)
+} up_image_t;
+
 typedef struct up_s {
-    const byte* input_pixels;
-    int32_t iw; // width
-    int32_t ih; // height
-    int32_t is; // stride
-    int32_t ic; // components
-    byte* output_pixels;
-    int32_t ow; // width
-    int32_t oh; // height
-    int32_t os; // stride
-    int32_t oc; // components
+    const up_image_t input;
+    up_image_t output;
 } up_t;
 
 typedef struct up_if {
-    void (*upscale)(up_t* up, uint32_t* seed);
+    // upscale() both input and output images must be allocated by caller
+    // seed must be odd and is needed for NN training, use 0x1 in debug
+    void (*upscale)(up_t* u, uint32_t* seed);
 } up_if;
 
 extern up_if up;

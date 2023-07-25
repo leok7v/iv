@@ -1,14 +1,16 @@
 /* Copyright (c) Dmitry "Leo" Kuznetsov 2021 see LICENSE for details */
 #include "quick.h"
 #include "stb_image.h"
-#include "dense.h"
+#include "up.h"
 
 // TODO: see README.md
 
 begin_c
 
+static void up2x2(void);
+
 uic_button(upscale, "\xE2\xA7\x88", 0, {
-    traceln("upscale");
+    up2x2();
 });
 
 uic_button(full_screen, "\xE2\xA7\x89", 0, {
@@ -48,6 +50,32 @@ static void load() {
     gdi.image_init(&image, w, h, bpp, pixels);
     free(pixels);
     crt.memunmap(data, bytes);
+}
+
+static void up2x2(void) {
+    up_t u = {
+        .input = {
+            .p = image.pixels,
+            .w = image.w,
+            .h = image.h,
+            .s = image.w * image.bpp,
+            .c = image.bpp
+        },
+        .output = {
+            .p = malloc(image.w * 2 * image.h * 2 * image.bpp),
+            .w = image.w * 2,
+            .h = image.h * 2,
+            .s = image.w * 2 * image.bpp,
+            .c = image.bpp
+        },
+    };
+    fatal_if_null(u.output.p);
+    uint32_t seed = (uint32_t)crt.nanoseconds();
+    #ifdef DEBUG
+        seed = 0x1;
+    #endif
+    up.upscale(&u, &seed);
+    free(u.output.p);
 }
 
 static void paint(uic_t* ui) {
