@@ -7,20 +7,25 @@
 
 begin_c
 
+uic_button(upscale, "\xE2\xA7\x88", 0, {
+    traceln("upscale");
+});
+
+uic_button(full_screen, "\xE2\xA7\x89", 0, {
+    app.full_screen(!app.is_full_screen);
+});
+
+uic_button(quit, "\xF0\x9F\x9E\xAD", 0, {
+    app.close();
+});
+
+static_uic_container(buttons, null, &upscale.ui, &full_screen.ui, &quit.ui);
+
 const char* title = "I.V.";
 
 static image_t image;
 
 static char filename[260]; // $(SolutionDir)..\mandrill-4.2.03.png
-
-static void init(void);
-
-app_t app = {
-    .class_name = "iv",
-    .init = init,
-    .min_width = 640,
-    .min_height = 640
-};
 
 static void* load_image(const byte* data, int64_t bytes, int32_t* w, int32_t* h,
     int32_t* bpp, int32_t preferred_bytes_per_pixel) {
@@ -56,11 +61,26 @@ static void paint(uic_t* ui) {
     }
 }
 
+static void measure(uic_t* unused(ui)) {
+}
+
+static void layout(uic_t* unused(ui)) {
+    layouts.horizontal(&buttons, buttons.x, buttons.y, 10);
+}
+
+static void openned(void) {
+}
+
 static void init(void) {
     app.title = title;
+    app.openned = openned;
     app.ui->paint = paint;
-//  TODO: load first (depth) image from:
-//  app.known_folder(known_folder_pictures)
+    app.ui->measure = measure;
+    app.ui->layout = layout;
+    static uic_t* children[] = { &buttons, null };
+    app.ui->children = children;
+    //  TODO: load first (depth) image from:
+    //  app.known_folder(known_folder_pictures)
     if (app.argc > 1) {
         strprintf(filename, "%s", app.argv[1]);
         if (access(filename, 0) == 0) {
@@ -68,5 +88,12 @@ static void init(void) {
         }
     }
 }
+
+app_t app = {
+    .class_name = "iv",
+    .init = init,
+    .min_width = 640,
+    .min_height = 640
+};
 
 end_c
