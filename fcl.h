@@ -227,17 +227,17 @@ static inline void fcl_check_sizes_and_structs_correctness() {
         typedef struct {
             fcl_weights_memory_iho(inputs, layers, hidden, outputs);
         } fcl_weights_memory_iho_t;
-        static_assert(fcl_weight_memory_size(inputs, layers, hidden, outputs) ==
+        static_assertion(fcl_weight_memory_size(inputs, layers, hidden, outputs) ==
             sizeof(fcl_weights_memory_iho_t));
         typedef struct {
             fcl_inference_memory_iho(inputs, layers, hidden, outputs);
         } fcl_inference_memory_t;
-        static_assert(fcl_inference_memory_size(inputs, layers, hidden, outputs) ==
+        static_assertion(fcl_inference_memory_size(inputs, layers, hidden, outputs) ==
                   sizeof(fcl_inference_memory_t) + sizeof(fcl_t));
         typedef struct {
             fcl_training_memory_iho(inputs, layers, hidden, outputs);
         } fcl_training_memory_t;
-        static_assert(fcl_training_memory_size(inputs, layers, hidden, outputs) ==
+        static_assertion(fcl_training_memory_size(inputs, layers, hidden, outputs) ==
                   sizeof(fcl_training_memory_t) + sizeof(fcl_t));
     }
     // Microsoft implementation of C99 and C17 does not allow zero size arrays
@@ -246,17 +246,17 @@ static inline void fcl_check_sizes_and_structs_correctness() {
         typedef struct {
             fcl_weights_memory_io(inputs, outputs);
         } fcl_weights_memory_io_t;
-        static_assert(fcl_weight_memory_size(inputs, layers, hidden, outputs) ==
+        static_assertion(fcl_weight_memory_size(inputs, layers, hidden, outputs) ==
             sizeof(fcl_weights_memory_io_t));
         typedef struct {
             fcl_inference_memory_io(inputs, outputs);
         } fcl_inference_memory_t;
-        static_assert(fcl_inference_memory_size(inputs, layers, hidden, outputs) ==
+        static_assertion(fcl_inference_memory_size(inputs, layers, hidden, outputs) ==
                   sizeof(fcl_inference_memory_t) + sizeof(fcl_t));
         typedef struct {
             fcl_training_memory_io(inputs, outputs);
         } fcl_training_memory_io_t;
-        static_assert(fcl_training_memory_size(inputs, layers, hidden, outputs) ==
+        static_assertion(fcl_training_memory_size(inputs, layers, hidden, outputs) ==
                   sizeof(fcl_training_memory_io_t) + sizeof(fcl_t));
     }
 }
