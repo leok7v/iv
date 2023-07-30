@@ -14,6 +14,7 @@ typedef struct up_image_s {
 typedef struct up_s {
     const up_image_t input;
     up_image_t output;
+    up_image_t half; // downscaled image
 } up_t;
 
 typedef struct up_if {

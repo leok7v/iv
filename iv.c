@@ -53,29 +53,40 @@ static void load() {
 }
 
 static void up2x2(void) {
+    const int32_t w = image.w % 2 == 0 ? image.w : image.w - 1;
+    const int32_t h = image.h % 2 == 0 ? image.h : image.h - 1;
     up_t u = {
         .input = {
             .p = image.pixels,
-            .w = image.w,
-            .h = image.h,
+            .w = w, // even width
+            .h = h, // even height
             .s = image.w * image.bpp,
             .c = image.bpp
         },
         .output = {
-            .p = malloc(image.w * 2 * image.h * 2 * image.bpp),
-            .w = image.w * 2,
-            .h = image.h * 2,
-            .s = image.w * 2 * image.bpp,
+            .p = malloc(w * 2 * h * 2 * image.bpp),
+            .w = w * 2,
+            .h = h * 2,
+            .s = w * 2 * image.bpp,
             .c = image.bpp
         },
+        .half = { // downscaled image
+            .p = (uint8_t*)malloc((w / 2) * (h / 2) * image.bpp),
+            .w = w / 2,
+            .h = h / 2,
+            .s = w / 2 * image.bpp,
+            .c = image.bpp
+        }
     };
     fatal_if_null(u.output.p);
+    fatal_if_null(u.half.p);
     uint32_t seed = (uint32_t)crt.nanoseconds();
     #ifdef DEBUG
         seed = 0x1;
     #endif
     up.upscale(&u, &seed);
     free(u.output.p);
+    free(u.half.p);
 }
 
 static void paint(uic_t* ui) {

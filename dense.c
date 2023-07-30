@@ -21,7 +21,9 @@ static void dense_forward(const dense_t* d, const fp_t input[dense_inputs], fp_t
     }
 }
 
-static fp_t dense_backward(dense_t* d, const fp_t input[dense_inputs], const fp_t truth[dense_outputs]) {
+static fp_t dense_backward(dense_t* d,
+        const fp_t input[dense_inputs], const fp_t truth[dense_outputs],
+        fp_t learning_rate) {
     // naive backpropagation
     fp_t activations[dense_neurons] = { 0 };
     fp_t output[dense_outputs] = { 0 };
@@ -45,14 +47,14 @@ static fp_t dense_backward(dense_t* d, const fp_t input[dense_inputs], const fp_
     // Update output weights and biases
     for (int i = 0; i < dense_outputs; i++) {
         for (int j = 0; j < dense_neurons; j++) {
-            d->ow[i][j] -= output_error[i] * activations[j];
+            d->ow[i][j] -= learning_rate * output_error[i] * activations[j];
         }
         d->ob[i] -= output_error[i];
     }
     // Update input weights and biases
     for (int i = 0; i < dense_neurons; i++) {
         for (int j = 0; j < dense_inputs; j++) {
-            d->iw[i][j] -= hidden_error[i] * input[j];
+            d->iw[i][j] -= learning_rate * hidden_error[i] * input[j];
         }
         d->ib[i] -= hidden_error[i];
     }
@@ -60,8 +62,9 @@ static fp_t dense_backward(dense_t* d, const fp_t input[dense_inputs], const fp_
 }
 
 static fp_t dense_random(uint32_t* seed) {
-    double r = crt.random32(seed) / (double)UINT32_MAX;
-    return (fp_t)(r * 2 - 1.0);
+    double r = crt.random32(seed) / (double)UINT32_MAX - 0.5; // [-0.5..0.5]
+    r = r < 0 ? r / 4 - 0.1 : r / 4 + 0.1;
+    return (fp_t)r;
 }
 
 static void dense_init(dense_t* d, uint32_t* seed) {
