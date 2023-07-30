@@ -1,6 +1,8 @@
 /* Copyright (c) Dmitry "Leo" Kuznetsov 2021 see LICENSE for details */
 #include "up.h"
-#include "dense.h"
+#define fp_t float
+#define fcl_type fp_t
+#include "fcl.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
 
@@ -126,62 +128,46 @@ static inline void int_swap(int32_t* a, int32_t* b) {
     int32_t t = *a; *a = *b; *b = t;
 }
 
-static void permute(int32_t* permutation, int32_t n, uint32_t* seed) {
+static void permute(int32_t* permutation, int32_t n, uint64_t* seed) {
     const int32_t m = n / 8;
     for (int i = 0; i < m; i++) {
-        int32_t ix0 = crt.random32(seed) % n;
-        int32_t ix1 = crt.random32(seed) % n;
+        int32_t ix0 = (int32_t)(crt.random64(seed) % n);
+        int32_t ix1 = (int32_t)(crt.random64(seed) % n);
         if (ix0 != ix1) { int_swap(permutation + ix0, permutation + ix1); }
     }
 }
 
-static void init_activation(dense_t* fcl) {
-#if 0 // inf
-    fcl->input_activation  = dense_linear_activation;
-    fcl->input_derivative  = dense_linear_derivative;
-    fcl->output_activation = dense_linear_activation;
-    fcl->output_derivative = dense_linear_derivative;
-#elif 0 // 10-12
-    fcl->input_activation  = dense_tanh_activation;
-    fcl->input_derivative  = dense_tanh_derivative;
-    fcl->output_activation = dense_tanh_activation;
-    fcl->output_derivative = dense_tanh_derivative;
-#elif 0 // 1.5-1.6 ***
-    fcl->input_activation  = dense_sigmoid_activation;
-    fcl->input_derivative  = dense_sigmoid_derivative;
-    fcl->output_activation = dense_sigmoid_activation;
-    fcl->output_derivative = dense_sigmoid_derivative;
+static void init_activation(fcl_t* nn) {
+#if 0
+    nn->activation_hidden = fcl.linear;
+    nn->activation_output = fcl.linear;
+#elif 0
+    nn->activation_hidden = fcl.tanh;
+    nn->activation_output = fcl.tanh;
 #elif 1
-    fcl->input_activation  = dense_swish_activation;
-    fcl->input_derivative  = dense_swish_derivative;
-    fcl->output_activation = dense_sigmoid_activation;
-    fcl->output_derivative = dense_sigmoid_derivative;
-#elif 0 // 3.2
-    fcl->input_activation  = dense_relu_activation;
-    fcl->input_derivative  = dense_relu_derivative;
-    fcl->output_activation = dense_relu_activation;
-    fcl->output_derivative = dense_relu_derivative;
-#elif 0 // 7 - 14
-    fcl->input_activation  = dense_leaky_relu_activation;
-    fcl->input_derivative  = dense_leaky_relu_derivative;
-    fcl->output_activation = dense_leaky_relu_activation;
-    fcl->output_derivative = dense_leaky_relu_derivative;
-#elif 0 // HUGE
-    fcl->input_activation  = dense_elu_activation;
-    fcl->input_derivative  = dense_elu_derivative;
-    fcl->output_activation = dense_elu_activation;
-    fcl->output_derivative = dense_elu_derivative;
-#elif 0 // HUGE
-    fcl->input_activation  = dense_swish_activation;
-    fcl->input_derivative  = dense_swish_derivative;
-    fcl->output_activation = dense_swish_activation;
-    fcl->output_derivative = dense_swish_derivative;
+    nn->activation_hidden = fcl.sigmoid;
+    nn->activation_output = fcl.sigmoid;
+#elif 0
+    nn->activation_hidden = fcl.relu;
+    nn->activation_output = fcl.sigmoid;
+#elif 0
+    nn->activation_hidden = fcl.relu;
+    nn->activation_output = fcl.relu;
+#elif 0
+    nn->activation_hidden = fcl.leaky_relu;
+    nn->activation_output = fcl.leaky_relu;
+#elif 0
+    nn->activation_hidden = fcl.elu;
+    nn->activation_output = fcl.elu;
+#elif 0
+    nn->activation_hidden = fcl.swish;
+    nn->activation_output = fcl.swish;
 #else
     fatal_if("must choose one of activation functions");
 #endif
 }
 
-static void upscale(up_t* u, uint32_t* seed) {
+static void upscale(up_t* u, uint64_t seed) {
     assert(u->input.w % 2 == 0, "expected even w: %d", u->input.w);
     assert(u->input.h % 2 == 0, "expected even h: %d", u->input.h);
     assert(u->input.c == 3, "dense layer is fixed constant size");
@@ -190,45 +176,45 @@ static void upscale(up_t* u, uint32_t* seed) {
     // [3x3] kernel at each pixel [1..h-1][1..w-1] x3 components
     const int32_t n = (u->half.h - 2) * (u->half.w - 2);
     int32_t* permutation = malloc(n * sizeof(int32_t));
+    fatal_if_null(permutation);
     for (int32_t i = 0; i < n; i++) { permutation[i] = i; }
-    fp_t* input = malloc((9 * u->half.c) * n * sizeof(fp_t));
+    fp_t* input  = malloc((3 * 3) * u->half.c  * n * sizeof(fp_t));
     fp_t* output = malloc((2 * 2) * u->input.c * n * sizeof(fp_t));
     fatal_if_null(input);
     fatal_if_null(output);
     ground_truth(u, input, output, n);
     traceln("train network");
-    static dense_t fcl; // fully connected dense layer network
-    fp_t learning_rate = 0.1f;
-    dense.init(&fcl, seed);
-    init_activation(&fcl);
-    for (int32_t epoch = 0; epoch < 4; epoch++) {
+    fp_t learning_rate = 0.2f;
+    enum { inputs = 3 * 3 * 3, layers = 5, hidden = 128, outputs = 2 * 2 * 3 };
+    int64_t bytes = fcl_training_memory_size(inputs, layers, hidden, outputs);
+    fcl_t* nn = (fcl_t*)malloc(bytes);
+    fatal_if_null(nn);
+    fcl.init(nn, bytes, seed, inputs, layers, hidden, outputs);
+    init_activation(nn);
+    const fp_t weight_range = (fp_t)sqrt(6.0 / (nn->inputs + nn->layers * nn->hidden + nn->outputs));
+    fcl.randomize(nn, weight_range);
+    for (int32_t epoch = 0; epoch < 8; epoch++) {
         fp_t max_loss = 0;
         fp_t loss_sum = 0;
-        permute(permutation, n, seed);
+        permute(permutation, n, &nn->seed);
         for (int32_t i = 0; i < n; i++) {
-            for (int32_t j = 0; j < 3 * 3 * 3; j++) {
-                assert(!isnan(input[i * 3 * 3 * 3 + j]));
-                assert(!isinf(input[i * 3 * 3 * 3 + j]));
-            }
-            for (int32_t j = 0; j < 2 * 2 * 3; j++) {
-                assert(!isnan(output[i * 2 * 2 * 3 + j]));
-                assert(!isinf(output[i * 2 * 2 * 3 + j]));
-            }
             const int32_t ix = permutation[i];
-            fp_t loss = dense.backward(&fcl,
+            fp_t loss = fcl.train(nn,
                 input + ix * 3 * 3 * 3,
                 output + ix * 2 * 2 * 3, learning_rate);
             loss_sum += loss;
-            if (loss > max_loss) { max_loss = loss; }
-            // traceln("loss: %f", loss);
+            if (loss > max_loss) { max_loss = loss; /* traceln("max_loss: %f", max_loss); */ }
+//          traceln("[%d/%d] loss: %f", i, n, loss);
         }
         fp_t avg_loss = loss_sum / n;
-        traceln("[%d] loss max: %f sqrt(max): %f avg: %f sqrt(avg): %f",
-            epoch, max_loss, sqrt(max_loss), avg_loss, sqrt(avg_loss));
+        traceln("[%d] loss max: %f avg: %f lr: %f", epoch, max_loss, avg_loss, learning_rate);
+        learning_rate = learning_rate - learning_rate / 32;
     }
     traceln("TODO: upscale thru inference");
+    free(nn);
     free(input);
     free(output);
+    free(permutation);
 }
 
 extern up_if up = {

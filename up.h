@@ -20,7 +20,7 @@ typedef struct up_s {
 typedef struct up_if {
     // upscale() both input and output images must be allocated by caller
     // seed must be odd and is needed for NN training, use 0x1 in debug
-    void (*upscale)(up_t* u, uint32_t* seed);
+    void (*upscale)(up_t* u, uint64_t seed);
 } up_if;
 
 extern up_if up;

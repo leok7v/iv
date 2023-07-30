@@ -80,11 +80,11 @@ static void up2x2(void) {
     };
     fatal_if_null(u.output.p);
     fatal_if_null(u.half.p);
-    uint32_t seed = (uint32_t)crt.nanoseconds();
+    uint64_t seed = crt.nanoseconds();
     #ifdef DEBUG
         seed = 0x1;
     #endif
-    up.upscale(&u, &seed);
+    up.upscale(&u, seed);
     free(u.output.p);
     free(u.half.p);
 }

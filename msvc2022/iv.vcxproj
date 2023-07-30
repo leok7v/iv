@@ -149,7 +149,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\crt.h" />
-    <ClInclude Include="..\dense.h" />
+    <ClInclude Include="..\fcl.h" />
     <ClInclude Include="..\quick.h" />
     <ClInclude Include="..\samples\version.h" />
     <ClInclude Include="..\stb_image.h" />
@@ -172,7 +172,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\dense.c" />
     <ClCompile Include="..\implementations.c" />
     <ClCompile Include="..\iv.c" />
     <ClCompile Include="..\up.c" />
