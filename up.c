@@ -84,16 +84,16 @@ static void hsi_to_rgb(const fp_t* hsi, uint8_t* rgb) {
 static void ground_truth(const up_t* u, fp_t* input, fp_t* output, int32_t n) {
     fp_t* i = input;
     fp_t* o = output;
-    for (int32_t y = 1; y < u->half.h - 1; y++) {
-        const int32_t y2 = (y - 1) * 2;
-        for (int32_t x = 1; x < u->half.w - 1; x++) {
+    for (int32_t y = 0; y < u->half.h - 2; y++) {
+        const int32_t y2 = y * 2;
+        for (int32_t x = 0; x < u->half.w - 2; x++) {
             for (int32_t r = 0; r < 3; r++) { // row
                 for (int32_t c = 0; c < 3; c++) { // column
                     rgb_to_hsi(u->half.p + (y + r) * u->half.s + (x + c) * u->half.c, i);
                     i += 3;
                 }
             }
-            const int32_t x2 = (x - 1) * 2;
+            const int32_t x2 = x * 2;
             for (int32_t r = 0; r < 2; r++) { // row
                 for (int32_t c = 0; c < 2; c++) { // column
                     rgb_to_hsi(u->input.p + (y2 + r) * u->input.s + (x2 + c) * u->input.c, o);
@@ -138,13 +138,16 @@ static void permute(int32_t* permutation, int32_t n, uint64_t* seed) {
 }
 
 static void init_activation(fcl_t* nn) {
-#if 0
-    nn->activation_hidden = fcl.linear;
-    nn->activation_output = fcl.linear;
+#if 1
+    nn->activation_hidden = fcl.sigmoid;
+    nn->activation_output = fcl.sigmoid;
 #elif 0
     nn->activation_hidden = fcl.tanh;
     nn->activation_output = fcl.tanh;
-#elif 1
+#elif 0
+    nn->activation_hidden = fcl.linear;
+    nn->activation_output = fcl.linear;
+#elif 0
     nn->activation_hidden = fcl.sigmoid;
     nn->activation_output = fcl.sigmoid;
 #elif 0
@@ -184,34 +187,75 @@ static void upscale(up_t* u, uint64_t seed) {
     fatal_if_null(output);
     ground_truth(u, input, output, n);
     traceln("train network");
-    fp_t learning_rate = 0.2f;
-    enum { inputs = 3 * 3 * 3, layers = 5, hidden = 128, outputs = 2 * 2 * 3 };
+    fp_t learning_rate = 0.5f;
+    enum { inputs = 3 * 3 * 3, layers = 3, hidden = 8, outputs = 1, epochs = 10 };
     int64_t bytes = fcl_training_memory_size(inputs, layers, hidden, outputs);
-    fcl_t* nn = (fcl_t*)malloc(bytes);
-    fatal_if_null(nn);
-    fcl.init(nn, bytes, seed, inputs, layers, hidden, outputs);
-    init_activation(nn);
-    const fp_t weight_range = (fp_t)sqrt(6.0 / (nn->inputs + nn->layers * nn->hidden + nn->outputs));
-    fcl.randomize(nn, weight_range);
-    for (int32_t epoch = 0; epoch < 8; epoch++) {
-        fp_t max_loss = 0;
-        fp_t loss_sum = 0;
-        permute(permutation, n, &nn->seed);
-        for (int32_t i = 0; i < n; i++) {
-            const int32_t ix = permutation[i];
-            fp_t loss = fcl.train(nn,
-                input + ix * 3 * 3 * 3,
-                output + ix * 2 * 2 * 3, learning_rate);
-            loss_sum += loss;
-            if (loss > max_loss) { max_loss = loss; /* traceln("max_loss: %f", max_loss); */ }
-//          traceln("[%d/%d] loss: %f", i, n, loss);
+    uint8_t* nn12 = malloc(bytes * 12);
+    fatal_if_null(nn12);
+    for (int32_t k = 0; k < 12; k++) {
+        fcl_t* nn = (fcl_t*)(nn12 + bytes * k);
+        fcl.init(nn, bytes, seed, inputs, layers, hidden, outputs);
+        init_activation(nn);
+        const fp_t weight_range = (fp_t)sqrt(6.0 / fcl_weights_count(inputs, layers, hidden, outputs));
+        fcl.randomize(nn, weight_range);
+        for (int32_t epoch = 0; epoch < epochs; epoch++) {
+            fp_t max_loss = 0;
+            fp_t loss_sum = 0;
+            permute(permutation, n, &nn->seed);
+            for (int32_t i = 0; i < n; i++) {
+                const int32_t ix = permutation[i];
+                fp_t loss = fcl.train(nn,
+                    input + ix * 3 * 3 * 3,
+                    output + ix * 2 * 2 * 3 + k, learning_rate);
+                loss_sum += loss;
+                if (loss > max_loss) { max_loss = loss; /* traceln("max_loss: %f", max_loss); */ }
+//              traceln("[%d/%d] loss: %f", i, n, loss);
+            }
+            if (epoch == epochs - 1) {
+                fp_t avg_loss = loss_sum / n;
+                traceln("[%02d] loss max: %f avg: %f", k, max_loss, avg_loss);
+            }
+            learning_rate = learning_rate - learning_rate / 128;
         }
-        fp_t avg_loss = loss_sum / n;
-        traceln("[%d] loss max: %f avg: %f lr: %f", epoch, max_loss, avg_loss, learning_rate);
-        learning_rate = learning_rate - learning_rate / 32;
     }
-    traceln("TODO: upscale thru inference");
-    free(nn);
+    fp_t hsi[3 * 3 * 3] = { 0 }; // 27
+    fp_t res[3] = { 0 }; // 12
+    uint8_t rgb[3] = { 0 };
+    for (int32_t y = 0; y < u->input.h - 2; y++) {
+        for (int32_t x = 0; x < u->input.w - 2; x++) {
+            for (int32_t r = 0; r < 3; r++) { // row
+                for (int32_t c = 0; c < 3; c++) { // column
+                    const int32_t yo = (y + r) * u->input.s;
+                    const int32_t xo = (x + c) * u->input.c;
+                    const int32_t hx = r * 3 * 3 + c * 3;
+                    rgb_to_hsi(u->input.p + yo + xo, hsi + hx);
+//                  traceln("[%03d:%d][%03d:%d] @%d %f, %f %f", y, r, x, c, hx, hsi[hx + 0], hsi[hx + 1], hsi[hx + 2]);
+                }
+            }
+            for (int32_t r = 0; r < 2; r++) { // row
+                for (int32_t c = 0; c < 2; c++) { // column
+                    for (int32_t k = 0; k < 3; k++) { // hsi index
+                        int32_t nx = r * 2 * 3 + c * 3 + k; // network index
+//                      traceln("[%d][%d][%d] nn[%d]", r, c, k, nx);
+                        fcl_t* nn = (fcl_t*)(nn12 + bytes * nx);
+                        res[k] = fcl.inference(nn, hsi)[0];
+                    }
+                    hsi_to_rgb(res, rgb);
+//                  traceln("%f, %f %f -> %02X%02X%02X", res[0], res[1], res[2], rgb[0], rgb[1], rgb[2]);
+                    for (int32_t k = 0; k < 3; k++) { // rgb index
+                        const int32_t y2 = y * 2 + r;
+                        const int32_t x2 = x * 2 + c;
+                        const int32_t ox = y2 * u->output.s + x2 * u->output.c + k;
+                        u->output.p[ox] = rgb[k];
+// const int32_t yo = (y + r) * u->input.s;
+// const int32_t xo = (x + c) * u->input.c;
+// u->output.p[ox] = u->input.p[yo + xo + (2 - k)];
+                    }
+                }
+            }
+        }
+    }
+    free(nn12);
     free(input);
     free(output);
     free(permutation);

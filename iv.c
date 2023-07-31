@@ -85,8 +85,11 @@ static void up2x2(void) {
         seed = 0x1;
     #endif
     up.upscale(&u, seed);
+    gdi.image_dispose(&image);
+    gdi.image_init(&image, u.output.w, u.output.h, u.output.c, u.output.p);
     free(u.output.p);
     free(u.half.p);
+    app.redraw();
 }
 
 static void paint(uic_t* ui) {
@@ -110,8 +113,15 @@ static void layout(uic_t* unused(ui)) {
 static void openned(void) {
 }
 
+static void fini(void) {
+    if (image.bitmap != null) {
+        gdi.image_dispose(&image);
+    }
+}
+
 static void init(void) {
     app.title = title;
+    app.fini = fini;
     app.openned = openned;
     app.ui->paint = paint;
     app.ui->measure = measure;
